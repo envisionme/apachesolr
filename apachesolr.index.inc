@@ -166,6 +166,7 @@ function apachesolr_node_to_document($nid, $namespace) {
  */
 function apachesolr_add_taxonomy_to_document($document, $node) {
   static $ancestors = array();
+  static $names = array();
   if (isset($node->taxonomy) && is_array($node->taxonomy)) {
     foreach ($node->taxonomy as $term) {
       // Double indexing of tids lets us do effecient searches (on tid)
@@ -181,13 +182,22 @@ function apachesolr_add_taxonomy_to_document($document, $node) {
       foreach ($ancestors[$term->tid] as $ancestor) {
         $document->setMultiValue('tid', $ancestor->tid);
         $document->setMultiValue('im_vid_'. $ancestor->vid, $ancestor->tid);
-        $name = apachesolr_clean_text($ancestor->name);
         $document->setMultiValue('vid', $ancestor->vid);
-        $ts_vid = 'ts_vid_' . $ancestor->vid . '_names';
+        // By including the synonyms with a term in the index we make
+        // sure that searches for a synonym match the corresponding term
+        // e.g. Automobile -> car, a search for automobile will find
+        // content categorized with car.
+        if (!isset($names[$ancestor->tid])) {
+          $names[$ancestor->tid] = array_map('apachesolr_clean_text', taxonomy_get_synonyms($ancestor->tid));
+          $names[$ancestor->tid][] = apachesolr_clean_text($ancestor->name);
+        }
+        $document->{'ts_vid_'. $ancestor->vid .'_names'} .= ' '. implode(' ', $names[$ancestor->tid]);
         $document->{$ts_vid} = isset($document->{$ts_vid}) ? $document->{$ts_vid} . ' ' . $name : $name;
         // We index each name as a string for cross-site faceting
         // using the vocab name rather than vid in field construction .
-        $document->setMultiValue('sm_vid_'. apachesolr_vocab_name($ancestor->vid), $name);
+        foreach ($names[$ancestor->tid] as $name) {
+          $document->setMultiValue('sm_vid_'. apachesolr_vocab_name($ancestor->vid), $name);
+        }
       }
     }
   }
@@ -308,11 +318,11 @@ function apachesolr_nodeapi_mass_update($nodes) {
   if (empty($nodes)) {
     return TRUE;
   }
-  
+
   if (variable_get('apachesolr_read_only', APACHESOLR_READ_WRITE) == APACHESOLR_READ_ONLY) {
     return TRUE;
   }
-  
+
   $published_ids = array();
   $unpublished_ids = array();
   foreach ($nodes as $node) {
