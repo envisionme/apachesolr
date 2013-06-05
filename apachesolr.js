@@ -5,6 +5,14 @@ Drupal.behaviors.apachesolr = function(context) {
     if ($(this).parent().find('.apachesolr-hidden-facet:visible').length == 0) {
       $(this).parent().find('.apachesolr-hidden-facet').show();
       $(this).text(Drupal.t('Show fewer'));
+
+      // Hide numerical facets.
+      $(".block-apachesolr_search .apachesolr-facet").each(function() {
+      var strPart = $(this).html().substr(0, 3);
+        if (isNaN(strPart) === false) {
+          $(this).parent().hide();
+        }
+      });
     }
     else {
       $(this).parent().find('.apachesolr-hidden-facet').hide();
