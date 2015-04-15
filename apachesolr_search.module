@@ -790,7 +790,7 @@ function apachesolr_search_nested_facet_items($query, $facets, $num_found, $sort
     }
 
     // Only display children if the block enables it or the parent is clicked.
-    if ((isset($facet_show_children['apachesolr_search'][$field_name]) && $facet_show_children['apachesolr_search'][$field_name]) || (!empty($field['#children']) && $field['#active'] == TRUE)) {
+    if ((isset($facet_show_children['apachesolr_search'][$field['#name']]) && $facet_show_children['apachesolr_search'][$field['#name']]) || (!empty($field['#children']) && $field['#active'] == TRUE)) {
       $link['children'] = apachesolr_search_nested_facet_items($query, $field['#children'], $num_found, $sort);
       $link['class'] = "expanded-facet";
     }
